@@ -1,6 +1,6 @@
 from bfk import brain
 i = brain() # create an instance
-i.bplist = [0] # enable debugger
+i.trap = 1 # activate debugger
 i.fuck(     # put your code here
         """
         helloworld
