@@ -80,13 +80,13 @@ class brain:
     # for debug and trap
         for b in self.bplist: # check breakpoints
             if b == self.pch:
-                print("fu*k break")
+                print("\nfu*k break")
                 break
         else: # check trap
             self.trap -= 1
             if self.trap != 0:
                 return
-            print("fu*k trapped")
+            print("\nfu*k trapped")
         while True:
             # print code
             start, end = 0, 0
@@ -95,9 +95,13 @@ class brain:
                     break
                 start -= 1
             while end <= 32 + start:
-                if code[self.pch + end ] == '\n':
+                try:
+                    if code[self.pch + end ] == '\n':
+                        break
+                except IndexError:
                     break
-                end += 1
+                else:
+                    end += 1
             print('fu*k code:', self.pch, end='')
             print( '(', code[(self.pch + start ):self.pch], '\033[31m*', end='')
             if code[self.pch] != '\n':
