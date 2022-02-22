@@ -1,5 +1,5 @@
 #!/usr/bin/python
-'''bfk: 
+'''bfk:
 A naive implementation of brainfu*k, go:
 
     brain.fuck(",>[.>,]")
@@ -7,47 +7,56 @@ A naive implementation of brainfu*k, go:
 '''
 
 
-class brain:
+class Brain:
+    '''
+    a minimal brainfu*k interpreter
+    '''
     def __init__(self):
-        self.array_p = [0] # non negative array
-        self.array_n = [0] # negative array
-        self.array = self.array_p
-        self.addrs = []
-        self.ptr = 0
-        self.pch = 0
-        self.bplist = [] # breakpoint list
-        self.trap = -1   # trap counter
-
-    def err(self, msg):
-    # report an error
-        print(msg)
+        self.array_p = [0]  # non-negative direction
+        self.array_n = [0]  # negative direction
+        self.array = self.array_p  # current array
+        self.addrs = []  # stack
+        self.code = ''  # code ptr
+        self.ptr = 0  # pointer to array
+        self.pch = 0  # pointer to character
+        self.symtbl = {
+            # call table for this interpreter
+            '>': self.rsh,
+            '<': self.lsh,
+            '+': self.inc,
+            '-': self.dec,
+            ',': self.ldt,
+            '.': self.ott,
+            ']': self.jnz,
+            '[': self.lab
+        }
 
     def rsh(self):
-    # right shift
+        "brainfu*k primitive: right shift"
         self.ptr += 1
         if self.ptr == 0:
             self.array = self.array_p
-        if(self.ptr >= len(self.array)):
+        if self.ptr >= len(self.array):
             self.array.append(0)
 
     def lsh(self):
-    # left shift
+        "brainfu*k primitive: left shift"
         self.ptr -= 1
-        if self.ptr == -1 :
+        if self.ptr == -1:
             self.array = self.array_n
-        if(abs(self.ptr) >= len(self.array)):
+        if abs(self.ptr) >= len(self.array):
             self.array.append(0)
 
     def inc(self):
-    # increment byte
+        "brainfu*k primitive: increment byte"
         self.array[abs(self.ptr)] = (self.array[abs(self.ptr)]+1) % 256
 
     def dec(self):
-    # decrement byte
+        "brainfu*k primitive: decrement byte"
         self.array[abs(self.ptr)] = (self.array[abs(self.ptr)]+255) % 256
 
     def ldt(self):
-    # load to
+        "brainfu*k primitive: load to"
         flag = True
         while flag:
             try:
@@ -58,229 +67,301 @@ class brain:
                 flag = False
 
     def ott(self):
-    # output to
-        print('%c' % (self.array[abs(self.ptr)]), end='')
+        "brainfu*k primitive: output to"
+        print(f'{self.array[abs(self.ptr)]:c}', end='')
 
     def jnz(self):
-    # jump if not zero
+        "brainfu*k primitive: jump if not zero"
         if self.array[abs(self.ptr)] != 0:
             self.pch = self.addrs[-1]
         else:
             self.addrs.pop()
 
     def lab(self):
-    # load address back
+        "brainfu*k primitive: load address back"
         self.addrs.append(self.pch)
 
     def ign(self):
-    # ignore
-        pass
-
-    def dbg(self, code):
-    # for debug and trap
-        for b in self.bplist: # check breakpoints
-            if b == self.pch:
-                print("\nfu*k break")
-                break
-        else: # check trap
-            self.trap -= 1
-            if self.trap != 0:
-                return
-            print("\nfu*k trapped")
-        while True:
-            # print code
-            start, end = 0, 0
-            while start >= -16:
-                if code[self.pch + start - 1] == '\n':
-                    break
-                start -= 1
-            while end <= 32 + start:
-                try:
-                    if code[self.pch + end ] == '\n':
-                        break
-                except IndexError:
-                    break
-                else:
-                    end += 1
-            print('fu*k code:', self.pch, end='')
-            print( '(', code[(self.pch + start ):self.pch], '\033[31m*', end='')
-            if code[self.pch] != '\n':
-                print(code[self.pch], end='')
-            else:
-                print('\\n', end='')
-            print( '*\033[0m', code[(self.pch + 1):(self.pch + end)], ')')
-            # print array
-            print('fu*k mem*:', self.ptr, end='')
-            print( '[', self.array[self.ptr-16:self.ptr],
-                  '\033[33m', self.array[self.ptr], '\033[0m',
-                   self.array[self.ptr+1:self.ptr+16], ']')
-            # interaction
-            ins = input("fu*k ins.> ")
-            if ins == "":
-                print("fu*k you didn't say anything!")
-                continue
-            if ins == "ba": # breakpoint add
-                bpaddr = self.pch
-                for b in self.bplist:
-                    if b == bpaddr:
-                        print("fu*k breakpoint already exist")
-                        break
-                else:
-                    self.bplist.append(bpaddr)
-                    print("fu*k breakpoint added at ", self.pch)
-            elif ins == "bc": # breakpoint clear
-                try:
-                    self.bplist.remove(self.pch)
-                except ValueError:
-                    print("which breakpoint fu*k you want to remove?")
-                else:
-                    print("fu*k breakpoint clear at ", self.pch)
-            elif ins == "bl": # breakpoint list
-                print("fu*k breakpoint list:")
-                for b in self.bplist:
-                    print("byte ", b, " : ", repr(code[b]))
-            elif ins[0] == 'b': # breakpoint at line l
-                try:
-                    l = int(ins[1:])
-                except ValueError:
-                    print("what fu*k did you say?")
-                else:
-                    for b in self.bplist:
-                        if b == l:
-                            print("fu*k breakpoint already exist")
-                            break
-                    else:
-                        self.bplist.append(l)
-                        print("fu*k breakpoint added at ", l)
-            elif ins == "c": # continue
-                self.trap = -1
-                print("fu*k continue")
-                break
-            elif ins[0] == 'd': # dump memory
-                try:
-                    l = int(ins[1:])
-                except ValueError:
-                    print("what fu*k did you say?")
-                else:
-                    try:
-                        v = self.array[l]
-                    except IndexError:
-                        print("where fu*k you want to see?")
-                    else:
-                        print("fu*k mem* dump: from ", l-16, " to ", l+16)
-                        print('\033[34m#\033[0m', self.array[l-16:l],
-                          '\033[34m', self.array[l], '\033[0m',
-                          self.array[l+1:l+16], '\033[34m#\033[0m')
-            elif ins[0] == 'e': # edition
-                code[self.pch] = ins[1]
-                print("modify current code to ", ins[1], ":{:#x}".format(ins[1]))
-            elif ins == "h": # help
-                print("""fu*k helpstr:
-                ==========brainfu*k debugger instructions========
-                ba      :add a breakpoint at current position
-                bc      :clear breakpoint at current position
-                bl      :list breakpoints
-                b num   :add a breakpoint at code[num]
-                c       :continue
-                d num   :dump memory at array[num-16:num+16]
-                e$      :edit character at current position to $
-                h       :show this fu*king help
-                i       :show brainfu*k information
-                j num   :jump to code[num]
-                l num   :list code at code[num-16:num+16]
-                s       :step
-                s num   :step forward for num
-                sc      :step forward to <>+-,.[]
-                q       :quit
-                ========================================*.#=&*===
-                """)
-            elif ins == "i": # information
-                print("self.array: ", self.array)
-                print("self.array_p: ", self.array_p)
-                print("self.array_n: ", self.array_n)
-                print("self.ptr: ", self.ptr)
-                print("self.pch: ", self.pch)
-                print("self.addrs: ", self.addrs)
-            elif ins[0] == 'j':
-                try:
-                    l = int(ins[1:])
-                except ValueError:
-                    print("what fu*k did you say?")
-                else:
-                    try:
-                        v = code[l]
-                    except IndexError:
-                        print("where fu*k you want to go?")
-                    else:
-                        self.pch = l
-                        print("fu*k jump to position ", l)
-
-            elif ins[0] == 'l': # list code
-                try:
-                    l = int(ins[1:])
-                except ValueError:
-                    print("what fu*k did you say?")
-                else:
-                    try:
-                        v = code[l]
-                    except IndexError:
-                        print("where fu*k you want to see?")
-                    else:
-                        print("fu*k list code: from ", l-16, " to ", l+16)
-                        print('\033[36m&\033[0m', repr(code[l-16:l]),
-                              '\033[36m',repr(code[l]),'\033[0m',
-                              repr(code[l+1:l+16]), '\033[36m&\033[0m')
-            elif ins == "s":
-                print("fu*k step")
-                self.trap = 1
-                return
-            elif ins == "sc": # step to code
-                while self.pch < len(code):
-                    if code[self.pch] in "<>+-,.[]":
-                        break
-                    self.pch += 1
-            elif ins[0] == 's': # step multiple instructions 
-                try:
-                    s = int(ins[1:])
-                except ValueError:
-                    print("what fu*k did you say?")
-                else:
-                    print("fu*k ", s, " steps")
-                    self.trap = s
-                    return
-            elif ins == "q": # quit
-                print("fu*k quit")
-                quit()
-            else:
-                print("what fu*k did you say?")
-            # extend debug functions here
+        "ignore that symbol and pass, this function is useful in debugging"
 
     def fuck(self, code):
-        while self.pch < len(code):
-            ch = code[self.pch]
-            self.dbg(code) # for debug uses
-            if ch == '>':
-                self.rsh()
-            elif ch == '<':
-                self.lsh()
-            elif ch == '+':
-                self.inc()
-            elif ch == '-':
-                self.dec()
-            elif ch == ',':
-                self.ldt()
-            elif ch == '.':
-                self.ott()
-            elif ch == ']':
-                self.jnz()
-            elif ch == '[':
-                self.lab()
+        "interpret a string @code"
+        self.code = code
+        while self.pch < len(self.code):
+            sym = self.code[self.pch]
+            if sym in self.symtbl:
+                self.symtbl[sym]()
             else:
                 self.ign()
             self.pch += 1
 
+
+class BrainDbgCore:
+    '''
+    debugger for class brain
+    '''
+    def __init__(self, brain=None):
+        self.attached = False
+        self.symtbl = {}
+        self.brain = brain  # a bfk interpreter
+        self.bplist = []  # breakpoint list
+        self.trapcnt = -1   # trap counter
+        self.trapflag = True  # trap flag
+
+    def attach(self, brain):
+        "attach to a brain instance"
+        if brain is not None and isinstance(brain, Brain):
+            self.brain = brain
+            self.symtbl = self.brain.symtbl
+            self.brain.symtbl = {}
+            # function override out of class
+            self.brain.ign = self.debug
+            self.attached = True
+        else:
+            print('fu*k, that is not a brain!')
+
+    def detach(self):
+        "detach from a brain instance"
+        if self.attached is True:
+            self.brain.ign = self.debug
+            self.brain.symtbl = self.symtbl
+
+    def bpadd(self, ins):
+        "add a breakpoint at ins[0]"
+        try:
+            pos = int(ins[0])
+        except IndexError:
+            pos = self.brain.pch
+        except ValueError:
+            print("what fu*k did you say?")
+            return
+        # add without repeating
+        if pos in self.bplist:
+            print("fu*k breakpoint already exist")
+        else:
+            self.bplist.append(pos)
+            print("fu*k breakpoint added at ", pos)
+
+    def bprmv(self, ins):
+        "remove a breakpoint at ins[0]"
+        try:
+            pos = int(ins[0])
+        except IndexError:
+            pos = self.brain.pch
+        except ValueError:
+            print("what fu*k did you say?")
+            return
+        # remove must exist
+        try:
+            self.bplist.remove(self.brain.pch)
+        except ValueError:
+            print("fu*k breakpoint does not exist!")
+        else:
+            print("fu*k breakpoint clear at ", pos)
+
+    def edit(self, ins):
+        "edit the code. set the code at ins[0] to ins[1]"
+        try:
+            pos = int(ins[0])
+        except IndexError or ValueError:
+            print("what fu*k did you say?")
+            return
+        else:
+            try:
+                val = int(ins[1])
+            except IndexError:
+                val = pos
+                pos = self.brain.pch
+            except ValueError:
+                print("what fu*k did you say?")
+                return
+        # modify code
+        try:
+            self.brain.code[pos] = val
+        except IndexError:
+            print("where fu*k did you write?")
+        else:
+            print("modify code at ", pos, "to {:#x}".format(val))
+
+    def jump(self, ins):
+        "jump in code, ins[0] is the target address"
+        try:
+            pos = int(ins[0])
+        except ValueError:
+            print("what fu*k did you say?")
+            return
+        # check & change pch
+        if 0 <= pos < len(self.brain.code):
+            self.brain.pch = pos
+            print("fu*k jump to position ", pos)
+        else:
+            print("where fu*k you want to go?")
+
+    def step(self, ins):
+        "step forward for ins[0] steps"
+        try:
+            cnt = int(ins[0])
+        except ValueError:
+            print("what fu*k did you say?")
+            return
+        except IndexError:
+            cnt = 1
+        # set trapcnt
+        if cnt >= 1:
+            self.trapcnt = cnt
+            self.trapflag = False
+        else:
+            print("where fu*k you want to go?")
+
+    def trap(self):
+        "a dummy trap for subclasses to implement"
+
+    def debug(self):
+        "The debugger function"
+        for bkp in self.bplist:
+            if bkp == self.brain.pch:
+                self.trapflag = True
+                break
+        else:  # check trap
+            if self.trapcnt > 0:
+                self.trapcnt -= 1
+            if self.trapcnt == 0:
+                self.trapflag = True
+            # trap before execution
+        self.trap()
+        # do normal work
+        sym = self.brain.code[self.brain.pch]
+        if sym in self.symtbl:
+            self.symtbl[sym]()
+
+
+class BrainDbgCli(BrainDbgCore):
+    '''
+    cmd interface of braindbg
+    '''
+    def __init__(self):
+        super().__init__(self)
+        self.instructions = {
+            'a': self.bpadd,
+            'b': self.ptraps,
+            'c': self.untrap,
+            'd': self.parray,
+            'e': self.edit,
+            'h': self.phelp,
+            'i': self.pinfo,
+            'j': self.jump,
+            'l': self.pcode,
+            'q': self.quit,
+            'r': self.bprmv,
+            's': self.step,
+        }
+
+    def phelp(self, ins):
+        "print instruction table"
+        print('==========brainfu*k debugger instructions========')
+        for key, val in self.instructions.items():
+            print(key, '\t:', val.__name__, '\n\t', val.__doc__)
+        print('========================================*.#=&*===')
+
+    def pinfo(self, ins):
+        "print brain information"
+        print("brain.array: ", self.brain.array)
+        print("brain.array_p: ", self.brain.array_p)
+        print("brain.array_n: ", self.brain.array_n)
+        print("brain.ptr: ", self.brain.ptr)
+        print("brain.pch: ", self.brain.pch)
+        print("brain.addrs: ", self.brain.addrs)
+
+    def pcode(self, ins):
+        "list code"
+        # unpack arguments
+        try:
+            start = int(ins[1])
+        except IndexError:
+            start, end = -16, 16
+        except ValueError:
+            print("what fu*k did you say?")
+            return
+        else:
+            try:
+                end = int(ins[2])
+            except IndexError:
+                end = 16
+            except ValueError:
+                print("what fu*k did you say?")
+                return
+        # print code
+        print('fu*k code:', self.brain.pch, '(',
+              repr(self.brain.code[(self.brain.pch + start):
+                                   min(self.brain.pch - 1,
+                                       self.brain.pch + end)]), end='')
+        if end >= 0:
+            print('\033[31m*',
+                  repr(self.brain.code[self.brain.pch]),
+                  '*\033[0m', end='')
+            if end >= 1:
+                print(repr(self.brain.code[(self.brain.pch + 1):
+                                           (self.brain.pch + end)]), ')')
+
+    def parray(self, ins):
+        "print array"
+        # unpack arguments
+        try:
+            start = int(ins[1])
+        except IndexError:
+            start, end = -16, 16
+        except ValueError:
+            print("what fu*k did you say?")
+            return
+        else:
+            try:
+                end = int(ins[2])
+            except IndexError:
+                end = 16
+            except ValueError:
+                print("what fu*k did you say?")
+                return
+        # combine array, if we do not do this, the code will be annoying
+        array = self.brain.array_n[:0:-1] + self.brain.array_p
+        offset = self.brain.ptr+len(self.brain.array_n)-1
+        # print array
+        print('fu*k mem*:', offset, '[',
+              self.brain.array[offset + start:min(offset - 1, offset + end)],
+              end='')
+        if end >= 0:
+            print('\033[33m', array[offset], '\033[0m', end='')
+            if end >= 1:
+                print(self.brain.array[offset + 1:offset + end], ']')
+
+    def ptraps(self):
+        "print breakpoints"
+        print("fu*k breakpoint list:")
+        for b in self.bplist:
+            print("byte ", b, " : ", repr(self.brain.code[b]))
+
+    def trap(self):
+        "interactions on cmdline, override the dummy one"
+        while self.trapflag is True:
+            ins = input("fu*k ins.> ").strip().split()
+            if ins is not None:
+                if ins[0] not in self.instructions:
+                    print("what fu*k did you say?")
+                else:
+                    self.instructions[ins[0]](ins[1:])
+
+    def untrap(self, ins):
+        "unset the trap, only used in instruction table"
+        self.trapcnt = -1
+        self.trapflag = False
+
+    def quit(self, ins):
+        "quit process, only used in instruction table"
+        quit()
+
+
 def main():
-    i = brain()
+    "main function, use for test"
+    i = Brain()
     i.fuck(
         """WELCOME TO BRAIN FUCK!
         ++++++++++++++++[>+++++>++++>++>+<<<<-]>+++++++.
@@ -289,6 +370,7 @@ def main():
         >---.<+++++++.>---.++++++++.>+.>---.---.
         """
     )
+
 
 if __name__ == '__main__':
     main()
