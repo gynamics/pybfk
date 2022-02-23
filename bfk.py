@@ -125,6 +125,7 @@ class BrainDbgCore:
         if self.attached is True:
             self.brain.ign = self.debug
             self.brain.symtbl = self.symtbl
+            self.attached = False
 
     def bpadd(self, ins):
         "add a breakpoint at ins[0]"
