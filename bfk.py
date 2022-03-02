@@ -244,7 +244,7 @@ class BrainDbgCli(BrainDbgCore):
         super().__init__(self)
         self.instructions = {
             'a': self.bpadd,
-            'b': self.ptraps,
+            'b': self.bpprt,
             'c': self.untrap,
             'd': self.parray,
             'e': self.edit,
@@ -335,11 +335,11 @@ class BrainDbgCli(BrainDbgCore):
                    self.brain.array[abs(self.brain.ptr)],
                    '\033[0m', end='')
         if end >= 0:
-            print(self.brain.array_p[min(start, 0, self.brain.ptr+1):end], end='')
+            print(self.brain.array_p[max(start, 0, self.brain.ptr+1):end], end='')
         print(']')
 
-    def ptraps(self):
-        "print breakpoints"
+    def bpprt(self, ins):
+        "print all breakpoints"
         print("fu*k breakpoint list:")
         for b in self.bplist:
             print("byte ", b, " : ", repr(self.brain.code[b]))
