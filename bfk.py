@@ -210,7 +210,7 @@ class BrainDbgCore:
         # set trapcnt
         if cnt >= 1:
             self.trapcnt = cnt
-            self.trapflag = False
+            self.trapflag = False  # prepare for leave
         else:
             print("where fu*k you want to go?")
 
@@ -277,62 +277,66 @@ class BrainDbgCli(BrainDbgCore):
         "list code"
         # unpack arguments
         try:
-            start = int(ins[1])
+            start = int(ins[0])
         except IndexError:
-            start, end = -16, 16
+            start = self.brain.pch - 16
+            end = self.brain.pch + 16
         except ValueError:
             print("what fu*k did you say?")
             return
         else:
             try:
-                end = int(ins[2])
+                end = int(ins[1])
             except IndexError:
-                end = 16
+                end = self.brain.pch + start
+                start = self.brain.pch - start
             except ValueError:
                 print("what fu*k did you say?")
                 return
         # print code
-        print('fu*k code:', self.brain.pch, '(',
-              repr(self.brain.code[(self.brain.pch + start):
-                                   min(self.brain.pch - 1,
-                                       self.brain.pch + end)]), end='')
-        if end >= 0:
-            print('\033[31m*',
+        print('fu*k code:', self.brain.pch, '(', end='')
+        if start < self.brain.pch < end:
+            print(repr(self.brain.code[start:self.brain.pch-1]),
+                  '\033[31m*',
                   repr(self.brain.code[self.brain.pch]),
-                  '*\033[0m', end='')
-            if end >= 1:
-                print(repr(self.brain.code[(self.brain.pch + 1):
-                                           (self.brain.pch + end)]), ')')
+                  '*\033[0m',
+                  repr(self.brain.code[self.brain.pch+1:end]),
+                  end='')
+        else:
+            print(repr(self.brain.code[start:end]), end='')
+        print(')')
 
     def parray(self, ins):
         "print array"
         # unpack arguments
         try:
-            start = int(ins[1])
+            start = int(ins[0])
         except IndexError:
-            start, end = -16, 16
+            start = self.brain.ptr - 16
+            end = self.brain.ptr + 16
         except ValueError:
             print("what fu*k did you say?")
             return
         else:
             try:
-                end = int(ins[2])
+                end = int(ins[1])
             except IndexError:
-                end = 16
+                end = self.brain.ptr - start
+                start = self.brain.ptr + start
             except ValueError:
                 print("what fu*k did you say?")
                 return
-        # combine array, if we do not do this, the code will be annoying
-        array = self.brain.array_n[:0:-1] + self.brain.array_p
-        offset = self.brain.ptr+len(self.brain.array_n)-1
         # print array
-        print('fu*k mem*:', offset, '[',
-              self.brain.array[offset + start:min(offset - 1, offset + end)],
-              end='')
+        print('fu*k mem*:', self.brain.ptr, '[', end='')
+        if start < 0:
+            print(self.brain.array_n[start:min(end+1, 0, self.brain.ptr-1):-1], end='')
+        if start < self.brain.ptr < end:
+             print('\033[33m',
+                   self.brain.array[abs(self.brain.ptr)],
+                   '\033[0m', end='')
         if end >= 0:
-            print('\033[33m', array[offset], '\033[0m', end='')
-            if end >= 1:
-                print(self.brain.array[offset + 1:offset + end], ']')
+            print(self.brain.array_p[min(start, 0, self.brain.ptr+1):end], end='')
+        print(']')
 
     def ptraps(self):
         "print breakpoints"
