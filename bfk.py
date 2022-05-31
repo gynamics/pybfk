@@ -348,7 +348,7 @@ class BrainDbgCli(BrainDbgCore):
         "interactions on cmdline, override the dummy one"
         while self.trapflag is True:
             ins = input("fu*k ins.> ").strip().split()
-            if ins is not None:
+            if ins != []:
                 if ins[0] not in self.instructions:
                     print("what fu*k did you say?")
                 else:
